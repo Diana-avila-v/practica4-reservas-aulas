@@ -6,6 +6,7 @@ import Cargando from '../components/Cargando';
 import ReservaForm from '../components/ReservaForm';
 import ReservaTabla from '../components/ReservaTabla';
 import { formatearFecha } from '../utils/fechas';
+import { rangoHora } from '../utils/validaciones';
 
 const FILTROS_VACIOS = { q: '', fecha: '' };
 
@@ -89,7 +90,7 @@ export default function Dashboard() {
   async function eliminar(reserva) {
     const ok = window.confirm(
       `¿Seguro que quieres eliminar la reserva del aula ${reserva.aula} ` +
-        `del ${formatearFecha(reserva.fecha)} a las ${reserva.hora}?\n\nEsta acción no se puede deshacer.`
+        `del ${formatearFecha(reserva.fecha)} (${rangoHora(reserva.hora)})?\n\nEsta acción no se puede deshacer.`
     );
     if (!ok) return;
 

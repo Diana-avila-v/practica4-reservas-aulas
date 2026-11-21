@@ -125,7 +125,7 @@ a { color: var(--color-primario); }
 .campo { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
 .campo label { font-weight: 600; font-size: 0.9rem; }
 
-input, textarea {
+input, textarea, select {
   font: inherit;
   color: inherit;
   width: 100%;
@@ -136,13 +136,15 @@ input, textarea {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 textarea { resize: vertical; }
-input:focus, textarea:focus {
+select { cursor: pointer; }
+input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--color-primario);
   box-shadow: 0 0 0 3px rgba(47, 91, 234, 0.18);
 }
-input[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--color-peligro); }
+input[aria-invalid='true'], textarea[aria-invalid='true'], select[aria-invalid='true'] { border-color: var(--color-peligro); }
 .campo__error { color: var(--color-error-texto); font-size: 0.85rem; }
+.campo__nota { color: var(--color-suave); font-size: 0.85rem; }
 
 .pie-formulario { text-align: center; margin: 1.25rem 0 0; color: var(--color-suave); }
 
@@ -242,6 +244,18 @@ input[aria-invalid='true'], textarea[aria-invalid='true'] { border-color: var(--
 .tabla tbody tr:hover { background: #fafbfd; }
 .tabla__fila--activa, .tabla__fila--activa:hover { background: var(--color-info-fondo) !important; }
 .tabla__motivo { overflow-wrap: anywhere; }
+.tabla__horario { white-space: nowrap; }
+.etiqueta-antigua {
+  display: inline-block;
+  margin-left: 0.3rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #fff4e0;
+  color: #8a5a00;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .tabla__acciones-cab { text-align: right !important; }
 .tabla__acciones { display: flex; gap: 0.4rem; justify-content: flex-end; }
 

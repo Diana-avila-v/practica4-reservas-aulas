@@ -25,9 +25,11 @@ El backend es una API REST con autenticación por **JWT** y el frontend es una S
 - Crear, listar, ver, editar y eliminar (con confirmación) reservas propias. Nadie ve ni modifica las reservas de otro usuario.
 - Búsqueda por texto (aula o motivo) y filtro por fecha. En el aula se ignoran espacios y mayúsculas: buscar `lab4` encuentra `A1, Lab 4`.
 - El nombre del aula se normaliza al guardar: se quitan los espacios sobrantes y se deja `", "` tras cada coma (`"  A1 ,Lab   4 "` → `"A1, Lab 4"`).
-- Un aula no se puede reservar dos veces el mismo día a la misma hora. Se compara ignorando espacios y mayúsculas: `A1, Lab4`, `a1,lab 4` y `A1, Lab 4` son la misma aula. La API responde **409** y la interfaz lo explica.
-- No se puede reservar en el pasado: se rechaza una fecha anterior a hoy o, si es hoy, una hora que ya llegó. Se usa la hora de **Ecuador (America/Guayaquil, UTC-5)**. La API responde **400** con “No puedes reservar en una fecha u hora pasada”, y el formulario lo valida antes de enviar (el selector de fecha no permite días anteriores a hoy).
-- Horario permitido: de **07:00 a 21:00**.
+- Las reservas son **bloques fijos de 1 hora** que empiezan en punto, de `07:00 – 08:00` a `20:00 – 21:00`. En el formulario se eligen en un desplegable (los bloques de hoy que ya empezaron aparecen desactivados) y la tabla muestra el rango.
+- Un aula no se puede reservar dos veces en el mismo bloque (mismo día y hora). Se compara ignorando espacios y mayúsculas: `A1, Lab4`, `a1,lab 4` y `A1, Lab 4` son la misma aula. La API responde **409** y la interfaz lo explica.
+- No se puede reservar en el pasado: se rechaza una fecha anterior a hoy o, si es hoy, un bloque que ya empezó. Se usa la hora de **Ecuador (America/Guayaquil, UTC-5)**. La API responde **400** con “No puedes reservar en una fecha u hora pasada”, y el formulario lo valida antes de enviar (el selector de fecha no permite días anteriores a hoy).
+- La API solo acepta horas en punto entre `07:00` y `20:00` (inicio del bloque). Cualquier otra (`08:30`, `21:00`…) devuelve **400** con un mensaje claro.
+- Las reservas antiguas con minutos sueltos (por ejemplo `07:12`), creadas antes de los bloques, se siguen mostrando con la etiqueta “fuera de bloque”. Se pueden ver y eliminar, y al editarlas hay que elegir un bloque.
 
 **Interfaz**
 - Diseño limpio y responsive: en el móvil la tabla se convierte en tarjetas.
@@ -46,7 +48,7 @@ Base: `http://localhost:4000/api`
 | POST   | `/auth/login`    | No | Inicia sesión. Body: `{ email, password }` → `{ token, usuario }` |
 | GET    | `/auth/me`       | Sí | Datos del usuario autenticado |
 | GET    | `/reservas`      | Sí | Lista tus reservas. Query opcional: `q` (texto en aula/motivo; en el aula ignora espacios y mayúsculas), `aula` (exacta, ignorando espacios y mayúsculas), `fecha` (`AAAA-MM-DD`) |
-| POST   | `/reservas`      | Sí | Crea una reserva. Body: `{ aula, fecha: "AAAA-MM-DD", hora: "HH:MM", motivo }`. Fecha y hora futuras (hora de Ecuador) y hora entre 07:00 y 21:00 |
+| POST   | `/reservas`      | Sí | Crea una reserva. Body: `{ aula, fecha: "AAAA-MM-DD", hora: "HH:00", motivo }`. `hora` es el inicio del bloque de 1 hora (`07:00` … `20:00`) y no puede haber empezado ya (hora de Ecuador) |
 | GET    | `/reservas/:id`  | Sí | Ver una reserva |
 | PUT    | `/reservas/:id`  | Sí | Editar (se pueden enviar solo los campos a cambiar). Si cambia la fecha o la hora, el resultado no puede quedar en el pasado |
 | DELETE | `/reservas/:id`  | Sí | Eliminar |
@@ -56,7 +58,7 @@ Base: `http://localhost:4000/api`
 
 | Código | Significado |
 |--------|-------------|
-| 400 | Validación fallida (incluye fecha u hora pasada y hora fuera del horario), id mal formado o JSON inválido |
+| 400 | Validación fallida (incluye fecha u hora pasada y hora que no es un bloque de 07:00 a 20:00), id mal formado o JSON inválido |
 | 401 | Falta el token, no es válido o expiró; o credenciales incorrectas |
 | 404 | La reserva no existe o no es tuya |
 | 409 | Email ya registrado o aula ya reservada a esa hora |
@@ -139,7 +141,7 @@ cd backend && npm run dev     # API en http://localhost:4000
 cd frontend && npm run dev    # Web en http://localhost:5173
 ```
 
-Al arrancar, el backend revisa las reservas ya guardadas: normaliza su aula, les calcula la clave de comparación y actualiza los índices. Si dos reservas antiguas resultan ser la misma aula el mismo día a la misma hora (por ejemplo `A1, Lab4` y `A1, Lab 4`), lo muestra como `AVISO` en la consola con sus ids. En ese caso elimina o cambia una de ellas y reinicia. Mientras tanto, la API sigue rechazando duplicados nuevos.
+Al arrancar, el backend revisa las reservas ya guardadas: normaliza su aula, les calcula la clave de comparación y actualiza los índices. Si dos reservas antiguas resultan ser la misma aula el mismo día a la misma hora (por ejemplo `A1, Lab4` y `A1, Lab 4`), lo muestra como `AVISO` en la consola con sus ids. En ese caso elimina o cambia una de ellas y reinicia. Mientras tanto, la API sigue rechazando duplicados nuevos. También avisa de las reservas **futuras** con hora fuera de bloque (por ejemplo `07:12`): conviene editarlas para elegir un bloque o eliminarlas, porque podrían cruzarse con un bloque nuevo de la misma aula. Las pasadas no molestan.
 
 Build de producción del frontend:
 ```bash

@@ -1,5 +1,6 @@
 const Reserva = require('../models/Reserva');
 const { normalizarAula, claveAula } = require('../utils/aula');
+const { HORAS_BLOQUE, claveDia, esFechaHoraPasada } = require('../utils/fechaHora');
 
 // Se ejecuta en cada arranque y es idempotente (si no hay nada que cambiar, no cambia nada).
 //
@@ -32,6 +33,19 @@ async function migrarReservas() {
     console.warn(
       `AVISO: reservas duplicadas para el aula "${d.aulas[0]}" el ${d._id.fecha.toISOString().slice(0, 10)} ` +
         `a las ${d._id.hora} (ids: ${d.ids.join(', ')}). Elimina o cambia una de ellas.`
+    );
+  }
+
+  // Reservas creadas antes de los bloques de 1 hora (por ejemplo a las 07:12).
+  // No se tocan: se siguen mostrando y se pueden borrar. Solo se avisa de las futuras,
+  // porque son las que podrían cruzarse con un bloque nuevo de la misma aula.
+  const fueraDeBloque = await Reserva.find({ hora: { $nin: HORAS_BLOQUE } }, { aula: 1, fecha: 1, hora: 1 }).lean();
+  const futuras = fueraDeBloque.filter((r) => !esFechaHoraPasada(claveDia(r.fecha), r.hora));
+  if (futuras.length) {
+    console.warn(
+      `AVISO: ${futuras.length} reserva(s) futura(s) con hora fuera de los bloques de 1 hora: ` +
+        futuras.map((r) => `"${r.aula}" ${claveDia(r.fecha)} ${r.hora} (${r._id})`).join('; ') +
+        '. Edítalas para elegir un bloque o elimínalas.'
     );
   }
 

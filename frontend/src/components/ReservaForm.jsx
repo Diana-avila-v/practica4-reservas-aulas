@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { describirError } from '../api/client';
 import Alerta from './Alerta';
 import { aFechaInput, ahoraEnEcuador, esFechaHoraPasada } from '../utils/fechas';
-import { HORA_APERTURA, HORA_CIERRE, HORA_REGEX, MENSAJE_PASADA } from '../utils/validaciones';
+import { HORAS_BLOQUE, MENSAJE_PASADA, esHoraDeBloque, rangoHora } from '../utils/validaciones';
 
 function valoresIniciales(reserva) {
   return {
     aula: reserva?.aula ?? '',
     fecha: aFechaInput(reserva?.fecha),
-    hora: reserva?.hora ?? '',
+    // Una reserva antigua con minutos sueltos (07:12) no tiene bloque: hay que elegir uno.
+    hora: esHoraDeBloque(reserva?.hora) ? reserva.hora : '',
     motivo: reserva?.motivo ?? '',
   };
 }
@@ -17,11 +18,8 @@ function validar(form) {
   const errores = {};
   if (!form.aula.trim()) errores.aula = 'El aula es obligatoria';
   if (!form.fecha) errores.fecha = 'La fecha es obligatoria';
-  if (!form.hora) errores.hora = 'La hora es obligatoria';
-  else if (!HORA_REGEX.test(form.hora)) errores.hora = 'Usa el formato HH:MM';
-  else if (form.hora < HORA_APERTURA || form.hora > HORA_CIERRE) {
-    errores.hora = `La hora debe estar entre las ${HORA_APERTURA} y las ${HORA_CIERRE}`;
-  }
+  if (!form.hora) errores.hora = 'Elige un bloque horario';
+  else if (!esHoraDeBloque(form.hora)) errores.hora = 'Elige uno de los bloques de 1 hora';
   if (!errores.fecha && !errores.hora && esFechaHoraPasada(form.fecha, form.hora)) {
     errores.fecha = MENSAJE_PASADA;
   }
@@ -34,10 +32,13 @@ function validar(form) {
 // `onGuardar(datos)` debe devolver una promesa; si falla, el error se muestra aquí.
 export default function ReservaForm({ reserva, onGuardar, onCancelar }) {
   const editando = Boolean(reserva);
+  const horaAntigua = editando && !esHoraDeBloque(reserva.hora) ? reserva.hora : null;
   const [form, setForm] = useState(() => valoresIniciales(reserva));
   const [erroresCampo, setErroresCampo] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
+
+  const ahora = ahoraEnEcuador();
 
   function cambiar(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -86,15 +87,28 @@ export default function ReservaForm({ reserva, onGuardar, onCancelar }) {
         </div>
         <div className="campo">
           <label htmlFor="fecha">Fecha</label>
-          <input id="fecha" name="fecha" type="date" min={ahoraEnEcuador().fecha} value={form.fecha}
+          <input id="fecha" name="fecha" type="date" min={ahora.fecha} value={form.fecha}
             onChange={cambiar} aria-invalid={Boolean(erroresCampo.fecha)} />
           {erroresCampo.fecha && <span className="campo__error">{erroresCampo.fecha}</span>}
         </div>
         <div className="campo">
-          <label htmlFor="hora">Hora</label>
-          <input id="hora" name="hora" type="time" min={HORA_APERTURA} max={HORA_CIERRE} value={form.hora}
-            onChange={cambiar} aria-invalid={Boolean(erroresCampo.hora)} />
+          <label htmlFor="hora">Horario</label>
+          <select id="hora" name="hora" value={form.hora} onChange={cambiar} aria-invalid={Boolean(erroresCampo.hora)}>
+            <option value="">Elige un bloque…</option>
+            {HORAS_BLOQUE.map((h) => {
+              // Si la fecha elegida es hoy, los bloques que ya empezaron no se pueden elegir.
+              const pasado = form.fecha === ahora.fecha && h <= ahora.hora;
+              return (
+                <option key={h} value={h} disabled={pasado}>
+                  {rangoHora(h)}{pasado ? ' (ya pasó)' : ''}
+                </option>
+              );
+            })}
+          </select>
           {erroresCampo.hora && <span className="campo__error">{erroresCampo.hora}</span>}
+          {horaAntigua && !erroresCampo.hora && (
+            <span className="campo__nota">Hora anterior: {horaAntigua} (fuera de bloque). Elige un bloque.</span>
+          )}
         </div>
       </div>
 

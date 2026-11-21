@@ -2,10 +2,10 @@ const Reserva = require('../models/Reserva');
 const AppError = require('../utils/AppError');
 const {
   HORA_APERTURA,
-  HORA_CIERRE,
+  HORA_ULTIMO_BLOQUE,
   claveDia,
   esFechaHoraPasada,
-  horaDentroDeHorario,
+  esHoraDeBloque,
 } = require('../utils/fechaHora');
 const { normalizarAula, claveAula } = require('../utils/aula');
 
@@ -48,8 +48,11 @@ function validarReserva(body = {}, parcial = false) {
       errores.push(`El campo "${campo}" debe ser texto`);
     } else if (campo === 'hora' && !HORA_REGEX.test(valor)) {
       errores.push('La hora debe tener el formato HH:MM (por ejemplo 09:30)');
-    } else if (campo === 'hora' && !horaDentroDeHorario(valor)) {
-      errores.push(`La hora debe estar entre las ${HORA_APERTURA} y las ${HORA_CIERRE}`);
+    } else if (campo === 'hora' && !esHoraDeBloque(valor)) {
+      errores.push(
+        `La hora debe ser una hora en punto entre las ${HORA_APERTURA} y las ${HORA_ULTIMO_BLOQUE} ` +
+          '(las reservas son bloques de 1 hora)'
+      );
     } else if (campo === 'aula') {
       datos.aula = normalizarAula(valor);
     } else {

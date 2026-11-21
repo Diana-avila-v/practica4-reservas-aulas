@@ -6,8 +6,17 @@
 // convertido a la hora de Ecuador (UTC-5), cae en el día anterior.
 
 const ZONA_HORARIA = 'America/Guayaquil';
-const HORA_APERTURA = '07:00';
-const HORA_CIERRE = '21:00';
+
+// Las reservas son bloques fijos de 1 hora que empiezan en punto:
+// 07:00–08:00, 08:00–09:00, …, 20:00–21:00.
+const PRIMER_BLOQUE = 7;
+const ULTIMO_BLOQUE = 20;
+const HORAS_BLOQUE = Array.from(
+  { length: ULTIMO_BLOQUE - PRIMER_BLOQUE + 1 },
+  (_, i) => `${String(PRIMER_BLOQUE + i).padStart(2, '0')}:00`
+);
+const HORA_APERTURA = HORAS_BLOQUE[0]; // "07:00"
+const HORA_ULTIMO_BLOQUE = HORAS_BLOQUE[HORAS_BLOQUE.length - 1]; // "20:00"
 
 const formateador = new Intl.DateTimeFormat('en-CA', {
   timeZone: ZONA_HORARIA,
@@ -32,8 +41,9 @@ function esFechaHoraPasada(fecha, hora, referencia = new Date()) {
   return fecha < ahora.fecha || (fecha === ahora.fecha && hora <= ahora.hora);
 }
 
-function horaDentroDeHorario(hora) {
-  return hora >= HORA_APERTURA && hora <= HORA_CIERRE;
+// true solo para el inicio de un bloque válido ("07:00" … "20:00").
+function esHoraDeBloque(hora) {
+  return HORAS_BLOQUE.includes(hora);
 }
 
 // Date guardado (medianoche UTC) → "AAAA-MM-DD"
@@ -43,10 +53,11 @@ function claveDia(fecha) {
 
 module.exports = {
   ZONA_HORARIA,
+  HORAS_BLOQUE,
   HORA_APERTURA,
-  HORA_CIERRE,
+  HORA_ULTIMO_BLOQUE,
   ahoraEnEcuador,
   esFechaHoraPasada,
-  horaDentroDeHorario,
+  esHoraDeBloque,
   claveDia,
 };
